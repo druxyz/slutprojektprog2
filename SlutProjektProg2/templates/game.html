@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang = "en">
+
+<head>
+    <style>
+
+        body{
+            margin:0;
+            overflow: hidden;
+        }
+
+        .food{
+            height:25px;
+            width:25px;
+            border-radius: 50%;
+            display:inline-block;
+            background-color:#000000;
+
+        }
+
+        canvas{
+            background-color:#000000;
+        }
+
+    </style>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+
+
+
+
+<body>
+
+<canvas id ="game"></canvas>
+
+
+<script>
+    oldMouseX = null;
+    oldMouseY = null;
+    let camX = 0;
+    let camY = 0;
+    window.addEventListener("beforeunload", function(){
+        socket.emit("leave", {"game_id": game_id});
+    });
+
+    const socket = io();
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const game_id = "{{ game_id }}";
+
+    socket.emit("add_player", {"game_id": game_id});
+
+    //Gör att canvasen blir lika stor som webbläsarfönstret
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    document.addEventListener("mousemove", function(event) {
+        const X = event.clientX;
+        const Y = event.clientY;
+        if(oldMouseX == X && oldMouseY == Y){
+            return;
+        }
+        socket.emit("mousePos", {"x": X, "y": Y});
+    });
+
+
+    socket.on("render_players", (data) => {
+
+        console.log("RENDERING")
+
+        playerPos = data.playerPos;
+        PlayerPositions = data.playerPositions;
+
+        drawPlayers(PlayerPositions)
+    });
+
+    let mySid = null;
+    socket.on("connect", () => {
+        mySid = socket.id;   // socket.io exposes the sid as socket.id
+    });
+
+
+    socket.on("render_food", (data) => {
+        foodPositions = data.foodPositions;
+        drawFood(foodPositions, camX, camY)
+    });
+
+
+    function drawFood(foodMap, camX, camY) {
+        for (const food of foodMap) {
+            const [pos, color] = food;
+            const [x, y] = pos;
+
+            ctx.beginPath();
+            ctx.arc(x - camX, y - camY, 10, 0, Math.PI * 2);
+            ctx.fillStyle = "#" + color;
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+
+
+    function drawPlayers(playerPositions) {
+
+        console.log("RENDERING PLAYERS")
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+
+        const player = playerPositions[mySid];
+        if (!player) return; 
+
+
+        camX = player.x - canvas.width / 2;
+        camY = player.y - canvas.height / 2;
+
+        for (const id in playerPositions) {
+            const player = playerPositions[id];
+
+            console.log(player)
+
+            ctx.beginPath();
+            ctx.arc(player.x - camX, player.y - camY, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+
+
+
+
+</script>    
+
+</body>
+
+
+</html>
