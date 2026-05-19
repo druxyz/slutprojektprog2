@@ -19,7 +19,7 @@
         }
 
         canvas{
-            background-color:#000000;
+            background-color:#212020;
         }
 
     </style>
@@ -101,6 +101,10 @@
 
 
 function drawFood(foodMap) {
+
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
+
     for (const food of foodMap) {
         ctx.beginPath();
         ctx.arc(food.x - camX, food.y - camY, food.radius, 0, Math.PI * 2);
