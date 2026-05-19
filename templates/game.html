@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang = "en">
+
+<head>
+    <style>
+
+        body{
+            margin:0;
+            overflow: hidden;
+        }
+
+        .food{
+            height:25px;
+            width:25px;
+            border-radius: 50%;
+            display:inline-block;
+            background-color:#000000;
+
+        }
+
+        canvas{
+            background-color:#000000;
+        }
+
+    </style>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+
+
+
+
+<body>
+
+<canvas id ="game"></canvas>
+
+
+<script>
+    oldMouseX = null;
+    oldMouseY = null;
+    let camX = 0;
+    let camY = 0;
+    window.addEventListener("beforeunload", function(){
+        socket.emit("leave", {"game_id": game_id});
+    });
+
+    const socket = io();
+    let mySid = null;
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const game_id = "{{ game_id }}";
+
+    socket.on("connect", () => {
+        mySid = socket.id;
+
+        socket.emit("add_player", {
+            "game_id": game_id
+        });
+    });
+
+    //Gör att canvasen blir lika stor som webbläsarfönstret
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    document.addEventListener("mousemove", function(event) {
+        const X = event.clientX;
+        const Y = event.clientY;
+        if(oldMouseX == X && oldMouseY == Y){
+            return;
+        }
+        socket.emit("mousePos", {
+            "x": X + camX,
+            "y": Y + camY
+        });
+    });
+
+
+ socket.on("game_state", (data) => {
+    if (!mySid) return;
+
+    const players = data.players;
+    const food = data.food;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const player = players[mySid];
+
+    if (!player) {
+        ctx.fillStyle = "white";
+        ctx.font = "40px Arial";
+        ctx.fillText("You died", canvas.width / 2 - 80, canvas.height / 2);
+        return;
+    }
+
+    camX = player.x - canvas.width / 2;
+    camY = player.y - canvas.height / 2;
+
+    drawFood(food);
+    drawPlayers(players);
+});
+
+
+function drawFood(foodMap) {
+    for (const food of foodMap) {
+        ctx.beginPath();
+        ctx.arc(food.x - camX, food.y - camY, food.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#" + food.color;
+        ctx.fill();
+        ctx.closePath();
+    }
+}
+
+
+function drawPlayers(playerPositions) {
+    for (const id in playerPositions) {
+        const player = playerPositions[id];
+
+        ctx.beginPath();
+        ctx.arc(player.x - camX, player.y - camY, player.radius, 0, Math.PI * 2);
+        ctx.fillStyle = player.color;
+        ctx.fill();
+        ctx.closePath();
+    }
+}
+
+
+
+
+</script>    
+
+</body>
+
+
+</html>
